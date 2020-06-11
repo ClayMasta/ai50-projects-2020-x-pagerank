@@ -57,7 +57,29 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+
+    prob_dist = {}
+    links = corpus[page]
+    num_links = len(links)
+    if num_links != 0:
+
+        prob_damp = (1 - damping_factor) / len(corpus)
+
+        for html in corpus:
+
+            if html in links:
+
+                prob_link = damping_factor / num_links
+                prob_dist[html] = prob_link + prob_damp
+
+            else:
+                prob_dist[html] = prob_damp
+
+    else:
+        for html in corpus:
+            prob_dist[html] = 1 / len(corpus)
+
+    return prob_dist
 
 
 def sample_pagerank(corpus, damping_factor, n):
@@ -69,7 +91,22 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    rank = {}
+    for html in corpus:
+        rank[html] = 0
+
+    next_page = random.choice(list(corpus))
+    rank[next_page] += 1
+
+    for i in range(n - 1):
+        prob_dist = transition_model(corpus, next_page, DAMPING)
+        next_page = random.choices(list(prob_dist.keys()), weights=list(prob_dist.values()))[0]
+        rank[next_page] += 1
+
+    for page in rank:
+        rank[page] = rank[page] / n
+
+    return rank
 
 
 def iterate_pagerank(corpus, damping_factor):
@@ -81,8 +118,44 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
+    N = len(corpus)
+    rank = {}
+    link_to = {}
+    for html in corpus:
+        rank[html] = 1 / N
+        link_to[html] = []
 
+    for html in corpus:
+        for link in corpus.get(html):
+            link_to[link].append(html)
+
+    iterations = 0
+    while True:
+        for html in corpus:
+            sum = 0
+            max_diff = 0
+            num_links_p = len(corpus[html])
+            if num_links_p != 0:
+                for i in link_to[html]:
+                    num_link_i = len(corpus[i])
+                    sum += rank[i] / num_link_i
+
+            else:
+                for i in rank:
+                    num_link_i = len(corpus[i])
+                    if num_link_i != 0:
+                        sum += rank[i] / num_link_i
+
+            new_rank = ((1 - damping_factor) / N) + (damping_factor * sum)
+            diff = abs(rank[html] - new_rank)
+            if diff > max_diff:
+                max_diff = diff
+
+            rank[html] = new_rank
+            iterations += 1
+
+        if max_diff < 0.001:
+            return rank
 
 if __name__ == "__main__":
     main()
