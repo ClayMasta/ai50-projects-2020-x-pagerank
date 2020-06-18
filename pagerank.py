@@ -5,6 +5,7 @@ import sys
 
 DAMPING = 0.85
 SAMPLES = 10000
+THRESHOLD = 0.001
 
 
 def main():
@@ -57,8 +58,8 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-
     prob_dist = {}
+
     links = corpus[page]
     num_links = len(links)
     if num_links != 0:
@@ -119,43 +120,39 @@ def iterate_pagerank(corpus, damping_factor):
     PageRank values should sum to 1.
     """
     N = len(corpus)
+
     rank = {}
+    new = {}
     link_to = {}
+
     for html in corpus:
         rank[html] = 1 / N
         link_to[html] = []
 
     for html in corpus:
-        for link in corpus.get(html):
+        for link in corpus[html]:
             link_to[link].append(html)
 
-    iterations = 0
     while True:
         for html in corpus:
             sum = 0
-            max_diff = 0
             num_links_p = len(corpus[html])
-            if num_links_p != 0:
-                for i in link_to[html]:
-                    num_link_i = len(corpus[i])
-                    sum += rank[i] / num_link_i
+            for i in link_to[html]:
+                num_links_i = len(corpus[i])
+                sum += rank[i] / num_links_i
 
-            else:
-                for i in rank:
-                    num_link_i = len(corpus[i])
-                    if num_link_i != 0:
-                        sum += rank[i] / num_link_i
+            new[html] = ((1 - damping_factor) / N) + (damping_factor * sum)
 
-            new_rank = ((1 - damping_factor) / N) + (damping_factor * sum)
-            diff = abs(rank[html] - new_rank)
+        max_diff = 0
+        for html in rank:
+            diff = abs(rank[html] - new[html])
             if diff > max_diff:
                 max_diff = diff
 
-            rank[html] = new_rank
-            iterations += 1
-
-        if max_diff < 0.001:
+        if max_diff < THRESHOLD:
             return rank
+
+        rank = new.copy()
 
 if __name__ == "__main__":
     main()
